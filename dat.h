@@ -1,5 +1,6 @@
 #define nil NULL
 
+typedef unsigned char uchar;
 typedef long long vlong;
 typedef unsigned int uint;
 typedef unsigned long ulong;

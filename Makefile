@@ -6,6 +6,7 @@ O=o
 TARG=udp7
 OFILES=\
 	main.$O\
+	echoplus.$O\
 	util.$O\
 
 HFILES=\

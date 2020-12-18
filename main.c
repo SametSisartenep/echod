@@ -69,9 +69,14 @@ void*
 udpechosrv(void *a)
 {
 	sockaddr_in csa;
-	char buf[4096], caddr[128], *cs;
+	uchar buf[4096];
+	char caddr[128], *cs;
 	int n, port;
 	uint csalen;
+	UDPEchoPlus ephdr;
+
+	struct timespec ts;
+	uvlong us;
 
 	memset(&csa, 0, sizeof(sockaddr_in));
 	csalen = sizeof(sockaddr_in);
@@ -84,6 +89,10 @@ udpechosrv(void *a)
 		}
 		pthread_mutex_unlock(&attendlock);
 
+		clock_gettime(CLOCK_REALTIME, &ts);
+		us = ts.tv_sec*1e6;
+		us += ts.tv_nsec/1e3;
+
 		cs = inet_ntoa(csa.sin_addr);
 		port = ntohs(csa.sin_port);
 		snprint(caddr, sizeof caddr, "udp!%s!%d", cs, port);
@@ -91,6 +100,24 @@ udpechosrv(void *a)
 		if(debug)
 			fprint(2, "thr#%lu received %d byte datagram from %s\n", pthread_self(), n, caddr);
 
+		/* check for echo+ data */
+		if(n >= 24){
+			if(getechoplus(&ephdr, buf) < 0)
+				goto EchoBack;
+
+			ephdr.ressn = ephdr.gensn;
+			ephdr.rxtime = us;
+			ephdr.ntxfails = 0; /* being over-optimistic */
+
+			clock_gettime(CLOCK_REALTIME, &ts);
+			us = ts.tv_sec*1e6;
+			us += ts.tv_nsec/1e3;
+
+			ephdr.txtime = us;
+
+			putechoplus(&ephdr, buf);
+		}
+EchoBack:
 		if(sendto(lfd, buf, n, 0, (sockaddr*)&csa, csalen) < 0)
 			continue;
 

@@ -111,3 +111,18 @@ acceptcall(int lfd, char *caddr, int caddrlen)
 	snprint(caddr, caddrlen, "tcp!%s!%d", cs, port);
 	return fd;
 }
+
+u32int
+get32(uchar *p)
+{
+	return (p[0]<<24) | (p[1]<<16) | (p[2]<<8) | p[3];
+}
+
+void
+put32(uchar *p, u32int v)
+{
+	p[0] = v>>24;
+	p[1] = v>>16;
+	p[2] = v>>8;
+	p[3] = v;
+}
