@@ -20,50 +20,12 @@ enum {
 
 int lfd, ncpu;
 pthread_t *threads;
-pthread_mutex_t attendlock;
 
 int debug;
 char *argv0;
 
 /*
- * echo service as of rfc862
- */
-//void
-//srvecho(int fd)
-//{
-//	char buf[8192];
-//	int n;
-//
-//	while((n = read(fd, buf, sizeof buf)) > 0)
-//		if(write(fd, buf, n) != n)
-//			return;
-//}
-//
-//void*
-//tmain(void *a)
-//{
-//	char caddr[128];
-//	int cfd;
-//
-//	for(;;){
-//		pthread_mutex_lock(&attendlock);
-//		if((cfd = acceptcall(lfd, caddr, sizeof caddr)) < 0)
-//			sysfatal("acceptcall: %r");
-//		pthread_mutex_unlock(&attendlock);
-//
-//		if(debug)
-//			fprint(2, "thr#%lu accepted call from %s\n", pthread_self(), caddr);
-//
-//		srvecho(cfd);
-//		close(cfd);
-//
-//		if(debug)
-//			fprint(2, "thr#%lu ended call with %s\n", pthread_self(), caddr);
-//	}
-//}
-
-/*
- * (udp)echo service as of rfc862
+ * (udp)echo service as of rfc862, with echo+ support
  */
 void*
 udpechosrv(void *a)
@@ -82,12 +44,8 @@ udpechosrv(void *a)
 	csalen = sizeof(sockaddr_in);
 
 	for(;;){
-		pthread_mutex_lock(&attendlock);
-		if((n = recvfrom(lfd, buf, sizeof buf, 0, (sockaddr*)&csa, &csalen)) < 0){
-			pthread_mutex_unlock(&attendlock);
+		if((n = recvfrom(lfd, buf, sizeof buf, 0, (sockaddr*)&csa, &csalen)) < 0)
 			continue;
-		}
-		pthread_mutex_unlock(&attendlock);
 
 		clock_gettime(CLOCK_REALTIME, &ts);
 		us = ts.tv_sec*1e6;
@@ -153,7 +111,6 @@ main(int argc, char *argv[])
 		ncpu = 1;
 
 	threads = emalloc(sizeof(pthread_t)*ncpu);
-	pthread_mutex_init(&attendlock, nil);
 
 	for(i = 0; i < ncpu; i++){
 		pthread_create(threads+i, nil, udpechosrv, nil);
@@ -164,6 +121,5 @@ main(int argc, char *argv[])
 	pause();
 
 	free(threads);
-	pthread_mutex_destroy(&attendlock);
 	exit(0);
 }
